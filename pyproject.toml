@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-aipi"
+version = "0.1.0"
+description = "Local Windows 11 bridge between Hermes Desktop Bot profiles and X-Origin AI Pi Lite endpoints."
+requires-python = ">=3.11"
+dependencies = [
+  "websockets==13.1",
+  "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+hermes-aipi = "hermes_aipi.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

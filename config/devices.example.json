@@ -1,0 +1,9 @@
+{
+  "devices": [
+    {"device_id":"aipi-01","name":"AI Pi 01","default_bot_id":"general"},
+    {"device_id":"aipi-02","name":"AI Pi 02","default_bot_id":"research"},
+    {"device_id":"aipi-03","name":"AI Pi 03","default_bot_id":"coding"},
+    {"device_id":"aipi-04","name":"AI Pi 04","default_bot_id":"operations"},
+    {"device_id":"aipi-05","name":"AI Pi 05","default_bot_id":"specialist"}
+  ]
+}
