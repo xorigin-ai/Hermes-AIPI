@@ -4,86 +4,117 @@ Local Windows 11 proof of concept for **Hermes Desktop Bot Mode** controlling fi
 
 ## POC thesis
 
-A fresh Windows 11 Hermes Desktop install can create persistent named Bots, assign them to physical AI Pi Lite endpoints, route voice/device events into those Bots, let Bots use existing Hermes apps, and allow Bot-to-Bot collaboration without any VPS, O-ai.cloud, or remote MCP dependency.
+A fresh Windows 11 Hermes Desktop install can create persistent named Bots, assign them to physical AI Pi Lite endpoints, route device/voice events into those Bots, let Bots use existing Hermes apps, and allow Bot-to-Bot collaboration without any VPS, O-ai.cloud, or remote MCP dependency.
 
-## Scope
+**Architectural invariant:** the Bot is the agent; the AI Pi Lite is a physical endpoint.
+
+## Scope lock
+
+Included:
 
 - Windows 11 Hermes dev box
-- Hermes Desktop with Bot Mode front and center
-- Five AI Pi Lite devices on the same LAN
-- Hermes-specific AI Pi firmware
-- Persistent Bot identities with role, model, memory, skills, and avatar
-- Device-to-Bot assignment and reassignment
-- Bot-to-Bot communication
-- Local device discovery, audio, screen, LED, volume, telemetry, and barge-in
-- Reuse of existing Hermes-compatible apps where practical
+- current Hermes Desktop Bot Mode
+- five AI Pi Lite devices on one LAN
+- persistent Hermes Bot profiles
+- persistent device-to-Bot assignment
+- HERM 16-byte PCM framing
+- local WebSocket endpoint bridge
+- speaker/microphone routing hooks
+- display/state channel
+- telemetry/events and barge-in
+- existing Hermes-compatible apps
+- Bot-to-Bot delegation
 
-## Explicitly out of scope for this POC
+Explicitly excluded from this POC:
 
 - VPS deployment
 - O-ai.cloud
-- Remote/shared MCP infrastructure
-- Cloud control plane
-- Distributed multi-site orchestration
+- remote/shared MCP infrastructure
+- cloud control plane
+- distributed multi-site orchestration
 
-## Source donors
+## Current implementation
 
-This repository consolidates and adapts existing work rather than starting from zero:
-
-- `xorigin-ai/Hermes-AIPI-lite` — hardware bridge, HERM framing, device telemetry/control, Hermes integration patterns
-- `xorigin-ai/Buddy/hermes-esp32-face` — ESP32/Xiaozhi firmware and display/face references
-- `xorigin-ai/Buddy/buddy_gibbertalk_ai_studio_handoff` — voice, avatar/state, and protocol donor references
-- Nous Research Hermes Desktop — authoritative Bot Mode/profile behavior
-
-Linux/VPS assumptions from donor projects must not be copied blindly into this Windows-local POC.
-
-## Target topology
+This branch now includes a runnable Windows-local bridge scaffold rather than architecture documents only:
 
 ```text
-Windows 11 Hermes Desktop
-        |
-        +-- Bot 1
-        +-- Bot 2
-        +-- Bot 3
-        +-- Bot 4
-        +-- Bot 5
-        |
-        +-- Hermes-AIPI local bridge
-                |
-                +-- AI Pi Lite 01
-                +-- AI Pi Lite 02
-                +-- AI Pi Lite 03
-                +-- AI Pi Lite 04
-                +-- AI Pi Lite 05
-```
+src/hermes_aipi/
+  bridge.py       AI Pi Lite WebSocket connections and Bot routing
+  protocol.py     canonical HERM 16-byte audio framing
+  registry.py     persistent device_id -> Hermes Bot mapping
+  main.py         local runtime entrypoint
 
-The Bots are the agents. The AI Pi Lite devices are physical Hermes endpoints.
+config/
+  devices.example.json
 
-## POC acceptance criteria
+scripts/
+  bootstrap-windows.ps1
+  run-bridge.ps1
 
-1. Fresh Hermes Desktop installation on Windows 11.
-2. Five named Bots exist with distinct profiles.
-3. Five AI Pi Lite devices pair locally and survive restart.
-4. Each device can be assigned to a default Bot and reassigned.
-5. Mic audio reaches Hermes and responses return to the correct device.
-6. Hermes can control screen, LED, volume, telemetry, and barge-in.
-7. At least one Bot invokes an existing Hermes-compatible app.
-8. At least one Bot delegates work to another Bot and consumes the result.
-9. Reboot preserves Bot profiles, memories, device identities, and assignments.
-10. The demo functions with the WAN disconnected after required models/dependencies are locally available.
+tests/
+  test_protocol.py
+  test_registry.py
 
-## Repository layout
-
-```text
 docs/
   ARCHITECTURE.md
   POC_CONTRACT.md
   DEVICE_BOT_MODEL.md
   SOURCE_PROVENANCE.md
-config/
-  devices.example.json
-scripts/
-  bootstrap-windows.ps1
+  HERMES_HANDOFF.md
 ```
 
-The first milestone is architecture and bootstrap. Runtime bridge and firmware consolidation follow against this contract.
+## Fresh Windows 11 handoff
+
+Clone this repository/branch onto the fresh Hermes dev box, then run PowerShell:
+
+```powershell
+.\scripts\bootstrap-windows.ps1
+```
+
+The bootstrap creates `.venv`, installs the local package and test dependencies, creates `runtime/config/devices.json`, and runs the unit tests.
+
+Start the device bridge with:
+
+```powershell
+.\scripts\run-bridge.ps1
+```
+
+Then give Hermes **`docs/HERMES_HANDOFF.md`** as the controlling implementation brief. Hermes should inspect the current installed/current Hermes Desktop Bot Mode source/API before wiring the bridge to profiles and sessions; do not guess undocumented interfaces.
+
+## Initial device map
+
+```text
+aipi-01 -> general
+aipi-02 -> research
+aipi-03 -> coding
+aipi-04 -> operations
+aipi-05 -> specialist
+```
+
+These are initial profile identifiers and can be updated to the actual persistent Bot profile IDs/names created on the fresh box without reflashing devices.
+
+## Source donors
+
+- `xorigin-ai/Hermes-AIPI-lite` — HERM framing, hardware bridge, telemetry/control and Hermes integration patterns
+- `xorigin-ai/Buddy/hermes-esp32-face/firmware/xiaozhi` — ESP32-S3 firmware reference
+- `xorigin-ai/Buddy/buddy_gibbertalk_ai_studio_handoff` — optional voice/avatar/protocol references
+- current Nous Research Hermes Desktop — authoritative Bot Mode/profile behavior
+
+See `docs/SOURCE_PROVENANCE.md`. Preserve donor licenses and do not blindly import Linux/VPS assumptions.
+
+## POC acceptance criteria
+
+1. Fresh Hermes Desktop installation on Windows 11.
+2. Five named persistent Bots exist with distinct profiles.
+3. Five AI Pi Lite devices pair locally and survive restart.
+4. Each device can be assigned/reassigned to a Bot without reflashing.
+5. Mic audio reaches the assigned Hermes Bot and response audio returns to the originating endpoint.
+6. Hermes controls display/state, LED/volume where supported, telemetry, and barge-in.
+7. At least one Bot invokes an existing Hermes-compatible app.
+8. At least one Bot delegates to another Bot and consumes the result.
+9. Reboot preserves Bot profiles, device identities, and assignments.
+10. Core demonstration works with WAN disconnected once required local assets are installed.
+
+## Important status boundary
+
+The repository is **ready to hand to Hermes for implementation on the actual Windows 11 dev box**, but the physical-device POC is not yet proven. Completion requires the real Hermes Bot/session adapter and AI Pi Lite firmware to be connected and validated against `docs/POC_CONTRACT.md`.
